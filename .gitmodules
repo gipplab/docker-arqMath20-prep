@@ -1,0 +1,3 @@
+[submodule "ARQMathCode"]
+	path = ARQMathCode
+	url = git@github.com:fairmath/ARQMathCode.git

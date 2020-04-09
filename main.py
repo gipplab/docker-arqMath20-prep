@@ -11,11 +11,12 @@ def main():
     dr = DataReaderRecord('/data')
     lst_questions = dr.get_question_of_tag("calculus")
     for q in lst_questions:
+        q_text = q.to_str()
         for a in dr.get_answers_for_question(q):
             writer.writerow({
                 'qID': q.post_id,
                 'aID': a.post_id,
-                'q': q.to_str(),
+                'q': q_text,
                 'a': a.to_str(),
                 'rel': q.accepted_answer_id == a.post_id
             })

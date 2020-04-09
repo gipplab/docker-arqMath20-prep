@@ -6,4 +6,4 @@ RUN pip install -r requirements.txt
 COPY . /app
 COPY main.py /app
 RUN touch ARQMathCode/__init__.py
-ENTRYPOINT ["python", "main.py"]
+ENTRYPOINT ["python", "main.py" ]

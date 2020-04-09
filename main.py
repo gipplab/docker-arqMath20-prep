@@ -1,5 +1,5 @@
 from ARQMathCode.post_reader_record import DataReaderRecord
-import csv
+import csv, logging
 
 csvfile = open('/data/qa-pair.csv', mode='w')
 fieldnames = ['qId', 'aID', 'q', 'a', 'rel']
@@ -10,12 +10,12 @@ writer.writeheader()
 def main():
     dr = DataReaderRecord('/data')
     lst_questions = dr.get_question_of_tag("calculus")
-    print(f'{len(lst_questions)} for tag calculus')
+    logging.info(f'{len(lst_questions)} for tag calculus')
     for q in lst_questions:
         q_text = q.to_str()
-        print(q.title)
-        for a in dr.get_answers_for_question(q):
-            print(f'{len(a)} answers')
+        answers = dr.get_answers_for_question(q)
+        logging.debug(f'Precessing {q.title} with {len(answers)} answers')
+        for a in answers:
             writer.writerow({
                 'qID': q.post_id,
                 'aID': a.post_id,

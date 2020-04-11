@@ -1,17 +1,22 @@
 import csv
 import logging
+from os import path
+
 from bs4 import BeautifulSoup
 from ARQMathCode.post_reader_record import DataReaderRecord
 
 
 def to_plain(html: str) -> str:
-    return ''.join(BeautifulSoup(html, 'html.parser').findAll(text=True))
+    return ''.join(BeautifulSoup(html, 'lxml').findAll(text=True))
 
 
 def main():
     logger = logging.getLogger(__name__)
     logging.basicConfig(level=logging.INFO)
     logger.setLevel(level=logging.DEBUG)
+    if path.exists('/data/qa-pair.csv'):
+        logger.warning("Exiting. Output file exists already.")
+        exit(1)
     csvfile = open('/data/qa-pair.csv', mode='w')
     fieldnames = ['qID', 'aID', 'q', 'a', 'rel']
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)

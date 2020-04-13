@@ -39,11 +39,23 @@ def pkl_write(pkl_location, data: T) -> T:
     return data
 
 
+def save_tag_subset(self: DataReaderRecord, tag):
+    for question_id in list(self.post_parser.map_questions):
+        question = self.post_parser.map_questions[question_id]
+        lst_tags = question.tags
+        if tag not in lst_tags:
+            l = get_answer_list(self, question)
+            for a in l:
+                self.post_parser.map_answers.pop(a.post_id, None)
+                self.post_parser.map_just_answers.pop(a.post_id, None)
+            self.post_parser.map_questions.pop(question_id, None)
+
+
 def main():
     logger = logging.getLogger(__name__)
     logging.basicConfig(level=logging.INFO)
     logger.setLevel(level=logging.DEBUG)
-    filename = '/data/qa-pair-proof.csv'
+    filename = '/data/qa-pair-generating-functions.csv'
     if path.exists(filename):
         logger.warning("Exiting. Output file exists already.")
         exit(1)
@@ -54,7 +66,7 @@ def main():
     logger.info("Output file created.")
 
     dr = pkl_read('/data/dr.pickle', data_reader)
-    lst_questions = dr.get_question_of_tag("proof-writing")
+    lst_questions = dr.get_question_of_tag("generating-functions")
     logging.info(f'{len(lst_questions)} questions for tag proof')
     for q in lst_questions:
         q_text = to_plain(q.title + '\n\n' + q.body)
@@ -70,6 +82,8 @@ def main():
             })
         csvfile.flush()
     csvfile.close()
+    save_tag_subset(dr, 'generating-functions')
+    pkl_write('/data/generating-functions.pickle', dr)
 
 
 if __name__ == "__main__":

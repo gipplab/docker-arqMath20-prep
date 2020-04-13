@@ -2,29 +2,32 @@ import csv
 import logging
 import pickle
 from os import path
+from typing import TypeVar, Callable
 
 from bs4 import BeautifulSoup
 from ARQMathCode.post_reader_record import DataReaderRecord
 
 
-def to_plain(html: str) -> str:
-    return ''.join(BeautifulSoup(html, 'lxml').findAll(text=True))
+def data_reader():
+    return DataReaderRecord('/data')
 
 
 def main():
     logger = logging.getLogger(__name__)
     logging.basicConfig(level=logging.INFO)
     logger.setLevel(level=logging.DEBUG)
-    if path.exists('/data/qa-pair.csv'):
+    filename = '/data/qa-pair-proof.csv'
+    if path.exists(filename):
         logger.warning("Exiting. Output file exists already.")
         exit(1)
-    csvfile = open('/data/qa-pair.csv', mode='w')
+    csvfile = open(filename, mode='w')
     fieldnames = ['qID', 'aID', 'q', 'a', 'rel']
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
     logger.info("Output file created.")
-    dr = read_data()
-    lst_questions = dr.get_question_of_tag("calculus")
+
+    dr = pkl_read('/data/dr.pickle', data_reader)
+    lst_questions = dr.get_question_of_tag("proof-writing")
     logging.info(f'{len(lst_questions)} questions for tag calculus')
     for q in lst_questions:
         q_text = to_plain(q.title + '\n\n' + q.body)
@@ -42,15 +45,14 @@ def main():
     csvfile.close()
 
 
-def read_data():
-    pkl_location = '/data/dr.pickle'
-    if path.exists(pkl_location):
-        with open(pkl_location, 'rb') as f:
-            return pickle.load(f)
-    data = DataReaderRecord('/data')
-    with open(pkl_location, 'wb') as f:
-        pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
-    return data
+if __name__ == "__main__":
+    main()
+
+T = TypeVar('T')
+
+
+def to_plain(html: str) -> str:
+    return ''.join(BeautifulSoup(html, 'lxml').findAll(text=True))
 
 
 def get_answer_list(dr, q):
@@ -60,5 +62,14 @@ def get_answer_list(dr, q):
     return answers
 
 
-if __name__ == "__main__":
-    main()
+def pkl_read(pkl_location, data_func: Callable[[], T], refresh=False) -> T:
+    if path.exists(pkl_location) and not refresh:
+        with open(pkl_location, 'rb') as f:
+            return pickle.load(f)
+    return pkl_write(pkl_location, data_func())
+
+
+def pkl_write(pkl_location, data: T) -> T:
+    with open(pkl_location, 'wb') as f:
+        pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+    return data

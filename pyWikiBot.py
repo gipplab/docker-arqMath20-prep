@@ -1,27 +1,70 @@
-import csv
 import logging
+import re
 from os import getenv
+from typing import Optional
 
 import pywikibot
 import pywikibot.flow
-import re
 from bs4 import BeautifulSoup, Tag, NavigableString
+from signal import *
 
+from pywikibot import Claim
+
+from main import get_answer_list, pkl_read, pkl_write
 from ARQMathCode.post_reader_record import DataReaderRecord
+
+
+def data_reader():
+    return DataReaderRecord('/data')
+
 
 data_repo = None
 w_link = re.compile(r'http://en\.wikipedia\.org/wiki/(.*)')
+qid = {
+    'users': {},
+    'posts': {},
+    'formulae': {},
+}
+
+
+def get_formula(fid) -> Optional[str]:
+    global qid
+    return qid['formulae'].get(fid)
+
+
+def add_formula(fid):
+    global qid
+    if get_formula(fid):
+        return pywikibot.ItemPage(get_data_repo(), get_formula(fid))
+    new_item = pywikibot.ItemPage(get_data_repo())
+    new_item.editLabels(labels={"en": f"Formula {fid}"})
+    p8 = pywikibot.Claim(get_data_repo(), u'P8')
+    p8.setTarget(fid)
+    new_item.addClaim(p8)
+    new_id = new_item.getID()
+    qid['formulae'][fid] = new_id
+    return new_item
 
 
 def get_data_repo():
     global data_repo
     if not data_repo:
+        site = get_site()
+        data_repo = site.data_repository()
+    return data_repo
+
+
+site = None
+
+
+def get_site():
+    global site
+    if not site:
         site = pywikibot.Site('fse', 'fse')  # The site we want to run our bot on
         if getenv('WIKI_PASS'):
             patch_wiki()
         site.login()
-        data_repo = site.data_repository()
-    return data_repo
+    return site
 
 
 def process_tag(tag: Tag):
@@ -29,15 +72,17 @@ def process_tag(tag: Tag):
     if tag.has_attr('class') and 'math-container' in tag['class']:
         fid = tag['id']
         formula = tag.text
-        # qid = 0
-        new_item = pywikibot.ItemPage(get_data_repo())
-        qid = new_item.get()
-        p1 = pywikibot.Claim(get_data_repo(), u'P1')
-        p1.setTarget(formula)
-        new_item.addClaim(p1)
-        p8 = pywikibot.Claim(get_data_repo(), u'P8')
-        p8.setTarget(fid)
-        return f'<math id={fid} qid={qid}>{formula}</math>'
+        new_item = add_formula(fid)
+        new_item.get()
+        if 'P1' in new_item.claims:
+            claim: Claim = new_item.claims['P1'][0]
+            if claim.target != formula:
+                claim.changeTarget(formula)
+        else:
+            p1 = pywikibot.Claim(get_data_repo(), u'P1')
+            p1.setTarget(formula)
+            new_item.addClaim(p1)
+        return f'<math id={fid} qid={get_formula(fid)}>{formula}</math>'
     if 'a' == tag.name:
         href = tag["href"]
         m = w_link.match(href)
@@ -84,47 +129,44 @@ def patch_wiki():
     pywikibot.input = new_input
 
 
+def load_qid():
+    global qid
+    qid = pkl_read('/data/qid.pickle', lambda: qid)
+
+
+def save_qid():
+    global qid
+    pkl_write('/data/qid.pickle', qid)
+
+
+def add_topic(q):
+    q_text = to_wikitext(q.title + '\n\n' + q.body)
+    pass
+
+
+def add_answer(a):
+    a_text = to_wikitext(a.body)
+    pass
+
+
 def main():
     logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging.WARNING)
+    logging.basicConfig(level=logging.ERROR)
     logger.setLevel(level=logging.DEBUG)
-    # chmod('/app/user-config.py', 0o600)
-    # patch_wiki()
-    # testbot()
-    # exit(0)
-    # if path.exists('/data/qa-pair.csv'):
-    #     logger.warning("Exiting. Output file exists already.")
-    #     exit(1)
-    csvfile = open('/data/qa-pair.csv', mode='w')
-    fieldnames = ['qID', 'aID', 'q', 'a', 'rel']
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    writer.writeheader()
-    logger.info("Output file created.")
-    dr = DataReaderRecord('/data')
+    for sig in (SIGABRT, SIGILL, SIGINT, SIGSEGV, SIGTERM):
+        signal(sig, save_qid)
+    load_qid()
+    dr = pkl_read('/data/dr.pickle', data_reader)
     lst_questions = dr.get_question_of_tag("proof-writing")
     logging.info(f'{len(lst_questions)} questions for tag calculus')
     # for questionId, q in dr.post_parser.map_questions.items():
     for q in lst_questions:
-        q_text = to_wikitext(q.title + '\n\n' + q.body)
         answers = get_answer_list(dr, q)
         logger.debug(f'Precessing {q.title} with {len(answers)} answers')
+        add_topic(q)
         for a in answers:
-            writer.writerow({
-                'qID': q.post_id,
-                'aID': a.post_id,
-                'q': q_text,
-                'a': to_wikitext(a.body),
-                'rel': q.accepted_answer_id == a.post_id
-            })
-        csvfile.flush()
-    csvfile.close()
-
-
-def get_answer_list(dr, q):
-    answers = dr.get_answers_for_question(q.post_id)
-    if answers is None:
-        answers = []
-    return answers
+            add_answer(a)
+        save_qid()
 
 
 if __name__ == "__main__":

@@ -1,17 +1,16 @@
 import logging
 import re
 from os import getenv
+from signal import *
 from typing import Optional
 
 import pywikibot
 import pywikibot.flow
 from bs4 import BeautifulSoup, Tag, NavigableString
-from signal import *
-
 from pywikibot import Claim
 
-from main import get_answer_list, pkl_read, pkl_write
 from ARQMathCode.post_reader_record import DataReaderRecord
+from main import get_answer_list, pkl_read, pkl_write
 
 
 def data_reader():
@@ -140,12 +139,18 @@ def save_qid():
 
 
 def add_topic(q):
-    q_text = to_wikitext(q.title + '\n\n' + q.body)
-    pass
+    q_text = to_wikitext(f"= {q.title} = \n\n{q.body}")
+    id_title = f'Topic {q.post_id}'
+    board = pywikibot.flow.Board(site, id_title)
+    for t in board.topics():
+        post: pywikibot.flow.Post = t.root
+        post.delete('Clean old version')
+    return board.new_topic(f'Topic {q.post_id}', q_text)
 
 
-def add_answer(a):
+def add_answer(a, t):
     a_text = to_wikitext(a.body)
+    t.reply(a_text)
     pass
 
 
@@ -163,9 +168,9 @@ def main():
     for q in lst_questions:
         answers = get_answer_list(dr, q)
         logger.debug(f'Precessing {q.title} with {len(answers)} answers')
-        add_topic(q)
+        t = add_topic(q)
         for a in answers:
-            add_answer(a)
+            add_answer(a, t)
         save_qid()
 
 

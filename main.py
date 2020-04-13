@@ -1,5 +1,6 @@
 import csv
 import logging
+import pickle
 from os import path
 
 from bs4 import BeautifulSoup
@@ -22,7 +23,7 @@ def main():
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
     logger.info("Output file created.")
-    dr = DataReaderRecord('/data')
+    dr = read_data()
     lst_questions = dr.get_question_of_tag("calculus")
     logging.info(f'{len(lst_questions)} questions for tag calculus')
     for q in lst_questions:
@@ -39,6 +40,17 @@ def main():
             })
         csvfile.flush()
     csvfile.close()
+
+
+def read_data():
+    pkl_location = '/data/dr.pickle'
+    if path.exists(pkl_location):
+        with open(pkl_location, 'rb') as f:
+            return pickle.load(f)
+    data = DataReaderRecord('/data')
+    with open(pkl_location, 'wb') as f:
+        pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+    return data
 
 
 def get_answer_list(dr, q):

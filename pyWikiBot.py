@@ -104,16 +104,6 @@ def to_wikitext(html_str: str) -> str:
     return process_tag(html)
 
 
-# def testbot():
-#     new_item = pywikibot.ItemPage(drepo)
-#     board = pywikibot.flow.Board(site, "pwTest")
-#     title = 'New topic'
-#     content = 'This is a new topic.'
-#     topic = board.new_topic(title, content)
-#     new_item.editLabels(labels={"en": "Hamburg Main Station", "de": "Hamburg Hauptbahnhof"})
-#     print(new_item.getID())
-
-
 # TODO: https://www.mediawiki.org/wiki/Manual:Pywikibot/OAuth
 def patch_wiki():
     import pywikibot
@@ -144,7 +134,8 @@ def add_topic(q):
     board = pywikibot.flow.Board(site, id_title)
     for t in board.topics():
         post: pywikibot.flow.Post = t.root
-        post.delete('Clean old version')
+        if id_title == post.get('topic-title-wikitext'):
+            return t
     return board.new_topic(f'Topic {q.post_id}', q_text)
 
 
@@ -161,7 +152,7 @@ def main():
     for sig in (SIGABRT, SIGILL, SIGINT, SIGSEGV, SIGTERM):
         signal(sig, save_qid)
     load_qid()
-    dr = pkl_read('/data/dr.pickle', data_reader)
+    dr = pkl_read('/data/generating-functions.pickle', data_reader)
     lst_questions = dr.get_question_of_tag("proof-writing")
     logging.info(f'{len(lst_questions)} questions for tag calculus')
     # for questionId, q in dr.post_parser.map_questions.items():

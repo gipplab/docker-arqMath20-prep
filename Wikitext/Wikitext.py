@@ -43,7 +43,7 @@ class Wikitext:
                 out += child.string
         return out
 
-    def to_wikitext(self, html_str: str) -> str:
+    async def to_wikitext(self, html_str: str) -> str:
         html = BeautifulSoup(html_str, 'lxml')
         return self.process_tag(html)
 

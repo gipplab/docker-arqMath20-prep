@@ -5,7 +5,7 @@ from typing import Optional
 
 import pywikibot
 import pywikibot.flow
-from pywikibot import Claim, ItemPage
+from pywikibot import Claim
 
 from main import pkl_read, pkl_write
 

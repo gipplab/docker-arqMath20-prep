@@ -9,6 +9,7 @@ from Wikidata import Wikidata
 class Wikitext:
     w_link = re.compile(r'http://en\.wikipedia\.org/wiki/(.*)')
     w: Wikidata = None
+    highlight = []
 
     @staticmethod
     def data_reader():
@@ -21,14 +22,18 @@ class Wikitext:
             qid = ''
             if self.w:
                 qid = f' qid={self.w.get_formula(fid, formula)}'
-            return f'<math id={fid}{qid}>{formula}</math>'
+            tag = f'<math id={fid}{qid}>{formula}</math>'
+            if fid in self.highlight:
+                return '{{highlight|' + tag + '}}'
+            else:
+                return tag
         if 'a' == tag.name:
             href = tag["href"]
             m = self.w_link.match(href)
             if m:
                 return f'[[w:{m.group(1)}|{tag.text}]]'
             return f'[{href} {tag.text}]'
-        if tag.string:
+        if len(list(tag.children)) == 0 and tag.string:
             return tag.string
         out = ''
         for child in tag.children:

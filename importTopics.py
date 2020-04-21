@@ -1,14 +1,16 @@
 import asyncio
 
 from Topics.TopicReader import TopicReader
+from Wikidata.Wikidata import Wikidata
 from Wikitext.Wikitext import Wikitext
 
 formula_reader = TopicReader('/data/Topics_V1.1.xml')
 text_reader = TopicReader('/data/Topics_V2.0.xml')
+wd = Wikidata()
 
 texts = []
 for k, v in formula_reader.map_topics.items():
-    wt = Wikitext()
+    wt = Wikitext(wd)
     wt.highlight = [v.formula]
     text = texts.append(wt.to_wikitext(v.title + v.question))
 

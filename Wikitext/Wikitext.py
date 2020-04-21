@@ -21,7 +21,7 @@ class Wikitext:
             formula = tag.text.strip('$ ')
             qid = ''
             if self.w:
-                qid = f' qid={self.w.get_formula(fid, formula)}'
+                qid = f' qid={self.w.add_formula(fid, formula)}'
             tag = f'<math id={fid}{qid}>{formula}</math>'
             if fid in self.highlight:
                 return '{{highlight|' + tag + '}}'

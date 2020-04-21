@@ -6,11 +6,13 @@ from typing import Optional
 import pywikibot
 import pywikibot.flow
 from pywikibot import Claim
+from pywikibot.site import APISite
 
 from main import pkl_read, pkl_write
 
 
 class Wikidata:
+    logger = None
     data_repo = None
     site = None
     qid = {
@@ -19,6 +21,11 @@ class Wikidata:
         'formulae': {},
         'tags': {},
     }
+
+    def delete_formula(self, fid):
+        q = self.get_formula(fid)
+        item = pywikibot.ItemPage(self.get_data_repo(), q)
+        item.delete('created by accident', prompt=False)
 
     def get_formula(self, fid) -> Optional[str]:
         return self.qid['formulae'].get(fid)
@@ -35,8 +42,11 @@ class Wikidata:
             f_item.addClaim(p8)
             new_id = f_item.getID()
             self.qid['formulae'][fid] = new_id
+            # TODO: remove immediately save option after debugging is complete
+            pkl_write('/data/qid.pickle', self.qid)
         if formula:
-            if 'P1' in f_item.claims:
+            self.logger.debug(f'Item {f_item.getID()} for formula {fid}.')
+            if f_item.claims and 'P1' in f_item.claims:
                 claim: Claim = f_item.claims['P1'][0]
                 if claim.target != formula:
                     claim.changeTarget(formula)
@@ -46,7 +56,7 @@ class Wikidata:
                 f_item.addClaim(p1)
         return self.get_formula(fid)
 
-    def get_data_repo(self):
+    def get_data_repo(self) -> APISite:
         if not self.data_repo:
             self.site = self.get_site()
             self.data_repo = self.site.data_repository()
@@ -74,13 +84,13 @@ class Wikidata:
     def load_qid(self):
         self.qid = pkl_read('/data/qid.pickle', lambda: self.qid)
 
-    def __del__(self):
+    def save_qid(self):
         pkl_write('/data/qid.pickle', self.qid)
 
     def __init__(self):
-        logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(__name__)
         logging.basicConfig(level=logging.ERROR)
-        logger.setLevel(level=logging.DEBUG)
+        self.logger.setLevel(level=logging.DEBUG)
         for sig in (SIGABRT, SIGILL, SIGINT, SIGSEGV, SIGTERM):
-            signal(sig, self.__del__)
+            signal(sig, self.save_qid)
         self.load_qid()

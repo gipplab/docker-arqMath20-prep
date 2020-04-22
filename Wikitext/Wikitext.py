@@ -1,6 +1,7 @@
 import re
 
 from bs4 import BeautifulSoup, Tag, NavigableString
+from pywikibot import NoPage, OtherPageSaveError
 
 from ARQMathCode.post_reader_record import DataReaderRecord
 from Wikidata import Wikidata
@@ -21,7 +22,13 @@ class Wikitext:
             formula = tag.text.strip('$ ')
             qid = ''
             if self.w:
-                qid = f' qid={self.w.add_formula(fid, formula)}'
+                try:
+                    qid = f' qid={self.w.add_formula(fid, formula)}'
+                except NoPage as e:
+                    print(e)
+                    pass
+                except OtherPageSaveError:
+                    pass
             tag = f'<math id={fid}{qid}>{formula}</math>'
             if fid in self.highlight:
                 return '{{highlight|' + tag + '}}'

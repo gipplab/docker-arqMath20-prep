@@ -5,7 +5,7 @@ from typing import Optional
 
 import pywikibot
 import pywikibot.flow
-from pywikibot import Claim
+from pywikibot import Claim, NoPage
 from pywikibot.site import APISite
 
 from main import pkl_read, pkl_write
@@ -60,7 +60,8 @@ class Wikidata:
             pkl_write('/data/qid.pickle', self.qid)
         if formula:
             self.logger.debug(f'Item {f_item.getID()} for formula {fid}.')
-            if f_item.claims and 'P1' in f_item.claims:
+            f_item.get() # initialize claims field
+            if 'P1' in f_item.claims:
                 claim: Claim = f_item.claims['P1'][0]
                 if claim.target != formula:
                     claim.changeTarget(formula)

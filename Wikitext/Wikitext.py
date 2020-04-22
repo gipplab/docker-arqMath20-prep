@@ -18,7 +18,10 @@ class Wikitext:
 
     def process_tag(self, tag: Tag):
         if tag.has_attr('class') and 'math-container' in tag['class']:
-            fid = tag['id']
+            fid = tag['id']#
+            display=''
+            if tag.text.startswith('$$'):
+                display = ' display=block'
             formula = tag.text.strip('$ ')
             qid = ''
             if self.w:
@@ -29,7 +32,7 @@ class Wikitext:
                     pass
                 except OtherPageSaveError:
                     pass
-            tag = f'<math id={fid}{qid}>{formula}</math>'
+            tag = f'<math id={fid}{qid}{display}>{formula}</math>'
             if fid in self.highlight:
                 return '{{highlight|' + tag + '}}'
             else:
@@ -40,9 +43,11 @@ class Wikitext:
             if m:
                 return f'[[w:{m.group(1)}|{tag.text}]]'
             return f'[{href} {tag.text}]'
+        out = ''
+        if 'p' == tag.name:
+            out="\n\n"
         if len(list(tag.children)) == 0 and tag.string:
             return tag.string
-        out = ''
         for child in tag.children:
             if isinstance(child, Tag):
                 out += self.process_tag(child)

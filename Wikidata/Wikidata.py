@@ -11,6 +11,20 @@ from pywikibot.site import APISite
 from main import pkl_read, pkl_write
 
 
+def q_from_csv():
+    """
+    Reinsert formula IDs to cache.
+    :return:
+    """
+    import csv
+    with open('/data/qformulae.csv', newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        wd = Wikidata()
+        for row in reader:
+            wd.qid['formulae'][row['y']] = row['item']
+        wd.save_qid()
+
+
 class Wikidata:
     logger = None
     data_repo = None
@@ -94,3 +108,7 @@ class Wikidata:
         for sig in (SIGABRT, SIGILL, SIGINT, SIGSEGV, SIGTERM):
             signal(sig, self.save_qid)
         self.load_qid()
+
+
+if __name__ == "__main__":
+    q_from_csv()

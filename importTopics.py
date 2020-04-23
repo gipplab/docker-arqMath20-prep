@@ -17,22 +17,24 @@ board = pywikibot.flow.Board(wd.get_site(), "Formula Topics")
 
 async def addTopic(tid, text, wt):
     wt = await wt.to_wikitext(text)
-    board.new_topic(f'Topic {tid}', wt)
+    id_title= f'Topic {tid}'
+    for t in board.topics():
+        post: pywikibot.flow.Post = t.root
+        if id_title == post.get('topic-title-wikitext'):
+            raise NotImplementedError("PyWikiBot cannot change topics")
+    board.new_topic(id_title, wt)
 
 
 for k, v in formula_reader.map_topics.items():
     wt = Wikitext(wd)
     wt.highlight = [v.formula]
-    text=f"== {v.title} == \n\n{v.question}"
-    t= addTopic(k, text, wt)
+    text = f"== {v.title} == \n\n{v.question}"
+    t = addTopic(k, text, wt)
     tasks.append(t)
 
 
 async def run():
-    results = await asyncio.gather(*tasks)
-    for res in results:
-        if 0 > res.find('highlight'):
-            print(res)
+    await asyncio.gather(*tasks)
 
 
 asyncio.run(run())

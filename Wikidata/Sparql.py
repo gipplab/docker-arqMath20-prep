@@ -23,9 +23,9 @@ async def query(q=test_query):
             return await resp.json()
 
 
-async def get_qids_from_property(property: int, value: str):
+async def get_qids_from_property(prop: int, value: str):
     q = 'prefix p: <https://arq20.formulasearchengine.com/prop/direct/> '
-    q += f'SELECT ?x where {{?x p:P{property} "{value}"}} LIMIT 10'
+    q += f'SELECT ?x where {{?x p:P{prop} "{value}"}} LIMIT 10'
     res = await query(q)
     try:
         for x in res['results']['bindings']:
@@ -34,12 +34,25 @@ async def get_qids_from_property(property: int, value: str):
         pass
 
 
-async def print_qids(property: int, value: str):
-    strings = get_qids_from_property(property, value)
+async def get_qid_from_property(prop: int, value: str):
+    values = get_qids_from_property(prop, value)
+    async for v in values:
+        return v
+    else:
+        return None
+
+
+async def print_qid(prop: int, value: str):
+    v = await get_qid_from_property(prop, value)
+    print(v)
+
+
+async def print_qids(prop: int, value: str):
+    strings = get_qids_from_property(prop, value)
     async for s in strings:
         print(s)
 
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(print_qids(15, 'B.2'))
+    loop.run_until_complete(print_qid(12, 'B.2'))

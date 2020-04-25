@@ -35,6 +35,7 @@ class Wikidata:
     PROP_CATEGORY = 'P10'
     PROP_FID = 'P8'
     PROP_POST_TYPE = 'P9'
+    PROP_POST_ID = 'P5'
     fastmode = True
 
     logger = None
@@ -53,6 +54,12 @@ class Wikidata:
             self.login = wdi_login.WDLogin(user='SchuBot', pwd=getenv('WIKI_PASS'),
                                            mediawiki_api_url=self.MW_URL)
         return self.login
+
+    async def insert_uplink(self, topic_id, uplink):
+        cur_id = await get_qid_from_property(12, topic_id)
+        data = [wdi_core.WDExternalID(value=uplink, prop_nr=self.PROP_POST_ID)]
+        wd_item = wdi_core.WDItemEngine(wd_item_id=cur_id, data=data, mediawiki_api_url=self.MW_URL)
+        return wd_item.write(self.get_login())
 
     async def add_topic(self, topic_id: str, categories: [str], fid=None) -> str:
         data = [wdi_core.WDExternalID(value=topic_id, prop_nr=self.PROP_TOPIC),

@@ -1,4 +1,5 @@
 import asyncio
+from typing import AsyncGenerator
 
 import aiohttp
 
@@ -17,29 +18,35 @@ async def query(q=test_query):
         'Accept': 'application/sparql-results+json',
         'User-Agent': 'moritz'
     }
-    async with aiohttp.ClientSession() as session:
+    timeout = aiohttp.ClientTimeout(total=None, connect=None, sock_connect=None, sock_read=None)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.post(sparql_url, params=params, headers=headers) as resp:
-            print(resp.status)
+            if resp.status != 200:
+                raise NotImplementedError('SPARQL error handling not implemented')
             return await resp.json()
 
 
-async def get_qids_from_property(prop: int, value: str):
+async def get_qids_from_property(prop: int, value: str, limit: int = 0) -> AsyncGenerator[str, None]:
     q = 'prefix p: <https://arq20.formulasearchengine.com/prop/direct/> '
-    q += f'SELECT ?x where {{?x p:P{prop} "{value}"}} LIMIT 10'
+    limit_clause = ''
+    if limit > 0:
+        limit_clause = f' LIMIT {limit}'
+    q += f'SELECT ?x where {{?x p:P{prop} "{value}"}}{limit_clause}'
     res = await query(q)
     try:
         for x in res['results']['bindings']:
-            yield (x['x']['value'][prefix_length:])
+            val: str = x['x']['value']
+            yield val[prefix_length:]
     except KeyError:
-        pass
+        return
 
 
 async def get_qid_from_property(prop: int, value: str):
-    values = get_qids_from_property(prop, value)
+    values = get_qids_from_property(prop, value, 1)
     async for v in values:
         return v
     else:
-        return None
+        return ''
 
 
 async def print_qid(prop: int, value: str):

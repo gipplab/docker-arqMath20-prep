@@ -5,9 +5,11 @@ from typing import Optional
 
 import pywikibot
 import pywikibot.flow
-from pywikibot import Claim, NoPage
+from pywikibot import Claim
 from pywikibot.site import APISite
+from wikidataintegrator import wdi_core, wdi_login
 
+from Wikidata.Sparql import get_qid_from_property
 from main import pkl_read, pkl_write
 
 
@@ -26,15 +28,42 @@ def q_from_csv():
 
 
 class Wikidata:
+    MW_URL = 'https://arq20.formulasearchengine.com/api.php'
+    SPARQL_URL = 'https://sparql.arq20.formulasearchengine.com/bigdata/sparql'
+    WIKIBASE_URL = 'https://arq20.formulasearchengine.com'
+    PROP_TOPIC = 'P12'
+    PROP_CATEGORY = 'P10'
+    PROP_FID = 'P8'
+    PROP_POST_TYPE = 'P9'
+    fastmode = True
+
     logger = None
     data_repo = None
     site = None
+    login = None
     qid = {
         'users': {},
         'posts': {},
         'formulae': {},
         'tags': {},
     }
+
+    def get_login(self):
+        if not self.login:
+            self.login = wdi_login.WDLogin(user='SchuBot', pwd=getenv('WIKI_PASS'),
+                                           mediawiki_api_url=self.MW_URL)
+        return self.login
+
+    async def add_topic(self, topic_id: str, categories: [str], fid=None) -> str:
+        data = [wdi_core.WDExternalID(value=topic_id, prop_nr=self.PROP_TOPIC),
+                wdi_core.WDItemID('Q887', prop_nr=self.PROP_POST_TYPE)]
+        for c in categories:
+            data.append(wdi_core.WDExternalID(value=c, prop_nr=self.PROP_CATEGORY))
+        if fid:
+            data.append(wdi_core.WDExternalID(value=fid, prop_nr=self.PROP_FID))
+        cur_id = await get_qid_from_property(12, topic_id)
+        wd_item = wdi_core.WDItemEngine(wd_item_id=cur_id, data=data, mediawiki_api_url=self.MW_URL)
+        return wd_item.write(self.get_login())
 
     def delete_formula(self, fid):
         q = self.get_formula(fid)
@@ -48,6 +77,8 @@ class Wikidata:
 
         if self.get_formula(fid):
             f_item = pywikibot.ItemPage(self.get_data_repo(), self.get_formula(fid))
+            if self.fastmode:
+                return self.get_formula(fid)
         else:
             f_item = pywikibot.ItemPage(self.get_data_repo())
             f_item.editLabels(labels={"en": f"Formula {fid}"})
@@ -60,7 +91,7 @@ class Wikidata:
             pkl_write('/data/qid.pickle', self.qid)
         if formula:
             self.logger.debug(f'Item {f_item.getID()} for formula {fid}.')
-            f_item.get() # initialize claims field
+            f_item.get()  # initialize claims field
             if 'P1' in f_item.claims:
                 claim: Claim = f_item.claims['P1'][0]
                 if claim.target != formula:

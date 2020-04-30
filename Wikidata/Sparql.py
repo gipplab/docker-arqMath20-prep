@@ -45,8 +45,7 @@ async def get_qid_from_property(prop: int, value: str):
     values = get_qids_from_property(prop, value, 1)
     async for v in values:
         return v
-    else:
-        return ''
+    return ''
 
 
 async def print_qid(prop: int, value: str):

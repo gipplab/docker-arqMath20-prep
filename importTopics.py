@@ -1,46 +1,40 @@
 import asyncio
-
-import pywikibot.flow
+import csv
 
 from Topics.TopicReader import TopicReader
-from Wikidata.Wikidata import Wikidata
 from Wikitext.Wikitext import Wikitext
 
-formula_reader = TopicReader('/data/Topics_V1.1.xml')
-text_reader = TopicReader('/data/Topics_V2.0.xml')
-wd = Wikidata()
+formula_reader = TopicReader('C:/git/fairmat/docker-arqMath20-prep/test/data/Topics_V1.1.xml')
+text_reader = TopicReader('C:/git/fairmat/docker-arqMath20-prep/test/data/Topics_V2.0.xml')
 
 tasks = []
 
+filename = 'C:/git/fairmat/docker-arqMath20-prep/test/data/topic-text.csv'
+csvfile = open(filename, mode='w',encoding='utf-8')
+fieldnames = ['tid','text']
+writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+writer.writeheader()
 
-async def addTopic(tid, v, wt, board):
+
+
+async def addTopic(tid, v, wt):
     text = f"== {v.title} == \n\n{v.question}"
     wikitext = await wt.to_wikitext(text)
-    new_qid = await wd.add_topic(tid, v.lst_tags, v.formula)
-    # new_qid = await wd.add_topic(k, v.lst_tags, v.formula)
-    wikitext += '\n\n{{Topic|' + new_qid + '|' + k + '}}'
-    # wikitext = await wt.to_wikitext(text)
-    id_title = f'Topic {tid}'
-    # board.get() #does not work from within async block
-    # for top in board.topics():
-    #     post: pywikibot.flow.Post = top.root
-    #     if id_title == post.get('topic-title-wikitext'):
-    #         raise NotImplementedError("PyWikiBot cannot change topics")
-    board.new_topic(id_title, wikitext)
+    writer.writerow({
+        'tid': tid,
+        'text': wikitext.strip()
+    })
 
-
-board = pywikibot.flow.Board(wd.get_site(), "Formula Topics")
 for k, v in formula_reader.map_topics.items():
-    wt = Wikitext(wd)
+    wt = Wikitext()
     wt.highlight = [v.formula]
-    t = addTopic(k, v, wt, board)
+    t = addTopic(k, v, wt)
     tasks.append(t)
 
-board = pywikibot.flow.Board(wd.get_site(), "Normal Topics")
 for k, v in text_reader.map_topics.items():
-    wt = Wikitext(wd)
+    wt = Wikitext()
     wt.highlight = [v.formula]
-    t = addTopic(k, v, wt, board)
+    t = addTopic(k, v, wt)
     tasks.append(t)
 
 

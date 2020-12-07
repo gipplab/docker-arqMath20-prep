@@ -1,15 +1,19 @@
 import logging
 import re
+import asyncio
 from os import getenv
 from signal import *
 from typing import Optional
 
 import pywikibot
 import pywikibot.flow
+import pywikibot.flow
 from bs4 import BeautifulSoup, Tag, NavigableString
 from pywikibot import Claim
 
 from ARQMathCode.post_reader_record import DataReaderRecord
+from Wikidata.Wikidata import Wikidata
+from Wikitext.Wikitext import Wikitext
 from main import get_answer_list, pkl_read, pkl_write
 
 
@@ -128,15 +132,22 @@ def save_qid():
     pkl_write('/data/qid.pickle', qid)
 
 
-def add_topic(q):
-    q_text = to_wikitext(f"= {q.title} = \n\n{q.body}")
+wd = Wikidata()
+wt = Wikitext(wd)
+
+async def add_topic(q):
+    text = f"= {q.title} = \n\n{q.body}"
     id_title = f'Topic {q.post_id}'
+    wikitext = await wt.to_wikitext(text)
+    new_qid = await wd.add_question(q.post_id, q.tags)
+    wikitext += '\n\n{{Question|' + new_qid + '|' + q.post_id + '}}'
     board = pywikibot.flow.Board(site, id_title)
     for t in board.topics():
         post: pywikibot.flow.Post = t.root
         if id_title == post.get('topic-title-wikitext'):
             return t
-    return board.new_topic(f'Topic {q.post_id}', q_text)
+    board.new_topic(f'Topic {q.post_id}', wikitext)
+    return new_qid
 
 
 def add_answer(a, t):
@@ -144,6 +155,17 @@ def add_answer(a, t):
     t.reply(a_text)
     pass
 
+
+async def process_question(q, dr, logger):
+    answers = get_answer_list(dr, q)
+    logger.debug(f'Precessing {q.title} with {len(answers)} answers')
+    t = await add_topic(q)
+    # for a in answers:
+    #     await add_answer(a, t)
+    save_qid()
+
+async def run(tasks):
+    await asyncio.gather(*tasks)
 
 def main():
     logger = logging.getLogger(__name__)
@@ -153,16 +175,13 @@ def main():
         signal(sig, save_qid)
     load_qid()
     dr = pkl_read('/data/generating-functions.pickle', data_reader)
-    lst_questions = dr.get_question_of_tag("proof-writing")
+    lst_questions = dr.get_question_of_tag("generating-functions")
     logging.info(f'{len(lst_questions)} questions for tag calculus')
     # for questionId, q in dr.post_parser.map_questions.items():
+    tasks = []
     for q in lst_questions:
-        answers = get_answer_list(dr, q)
-        logger.debug(f'Precessing {q.title} with {len(answers)} answers')
-        t = add_topic(q)
-        for a in answers:
-            add_answer(a, t)
-        save_qid()
+        tasks.append(process_question(q, dr, logger))
+    asyncio.run(run(tasks))
 
 
 if __name__ == "__main__":

@@ -72,6 +72,15 @@ class Wikidata:
         wd_item = wdi_core.WDItemEngine(wd_item_id=cur_id, data=data, mediawiki_api_url=self.MW_URL)
         return wd_item.write(self.get_login())
 
+    async def add_question(self, topic_id: str, categories: [str]) -> str:
+        data = [wdi_core.WDExternalID(value=topic_id, prop_nr=self.PROP_POST_ID),
+                wdi_core.WDItemID('Q887', prop_nr=self.PROP_POST_TYPE)]
+        for c in categories:
+            data.append(wdi_core.WDExternalID(value=c, prop_nr=self.PROP_CATEGORY))
+        cur_id = await get_qid_from_property(5, topic_id)
+        wd_item = wdi_core.WDItemEngine(wd_item_id=cur_id, data=data, mediawiki_api_url=self.MW_URL)
+        return wd_item.write(self.get_login())
+
     def delete_formula(self, fid):
         q = self.get_formula(fid)
         item = pywikibot.ItemPage(self.get_data_repo(), q)

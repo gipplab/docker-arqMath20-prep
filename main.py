@@ -111,7 +111,7 @@ def main():
     logger = logging.getLogger(__name__)
     logging.basicConfig(level=logging.INFO)
     logger.setLevel(level=logging.DEBUG)
-    filename = '/data/qa-pair-generating-functions.csv'
+    filename = '/data/qonly.csv'
     if path.exists(filename):
         logger.warning("Exiting. Output file exists already.")
         exit(1)

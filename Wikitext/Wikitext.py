@@ -4,12 +4,11 @@ from bs4 import BeautifulSoup, Tag, NavigableString
 from pywikibot import NoPage, OtherPageSaveError
 
 from ARQMathCode.post_reader_record import DataReaderRecord
-from Wikidata import Wikidata
 
 
 class Wikitext:
     w_link = re.compile(r'http://en\.wikipedia\.org/wiki/(.*)')
-    w: Wikidata = None
+    w= None
     highlight = []
 
     @staticmethod

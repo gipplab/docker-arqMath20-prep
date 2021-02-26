@@ -5,4 +5,4 @@ pywikibot
 wikidataintegrator==0.6.0
 pandas
 tqdm
-aiohttp==3.6.2
+aiohttp==3.7.4
